@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 const problems = [
   "Poor mobile experience",
@@ -42,7 +43,7 @@ const packages = [
   },
 ];
 
-const process = [
+const processSteps = [
   "Audit your current website",
   "Share improvement plan",
   "Build modern website",
@@ -66,13 +67,18 @@ const initialAuditForm = {
   website: "",
   websiteStatus: "",
   email: "",
+  message: "",
 };
 
 export default function Home() {
   const [auditForm, setAuditForm] = useState(initialAuditForm);
   const [auditFormError, setAuditFormError] = useState("");
+  const [auditFormStatus, setAuditFormStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
+  const [isAuditSubmitting, setIsAuditSubmitting] = useState(false);
 
-  function handleAuditSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleAuditSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedForm = {
@@ -81,6 +87,7 @@ export default function Home() {
       website: auditForm.website.trim(),
       websiteStatus: auditForm.websiteStatus.trim(),
       email: auditForm.email.trim(),
+      message: auditForm.message.trim(),
     };
 
     if (
@@ -90,23 +97,43 @@ export default function Home() {
       !trimmedForm.email
     ) {
       setAuditFormError("Please fill in all required fields.");
+      setAuditFormStatus("idle");
       return;
     }
 
     setAuditFormError("");
+    setAuditFormStatus("idle");
+    setIsAuditSubmitting(true);
 
-    const subject = `Free Website Audit Request - ${trimmedForm.business}`;
-    const body = [
-      `Name: ${trimmedForm.name}`,
-      `Business Name: ${trimmedForm.business}`,
-      `Website Status: ${trimmedForm.websiteStatus}`,
-      `Existing Website URL: ${trimmedForm.website || "N/A"}`,
-      `Email: ${trimmedForm.email}`,
-    ].join("\n");
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    window.location.href = `mailto:sumanaai.official@gmail.com?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Missing Supabase environment variables.");
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { error } = await supabase.from("audit_requests").insert({
+        name: trimmedForm.name,
+        business_name: trimmedForm.business,
+        website_status: trimmedForm.websiteStatus,
+        existing_website_url: trimmedForm.website || null,
+        email: trimmedForm.email,
+        message: trimmedForm.message || null,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setAuditForm(initialAuditForm);
+      setAuditFormStatus("success");
+    } catch {
+      setAuditFormStatus("error");
+    } finally {
+      setIsAuditSubmitting(false);
+    }
   }
 
   return (
@@ -293,6 +320,9 @@ export default function Home() {
                     if (auditFormError) {
                       setAuditFormError("");
                     }
+                    if (auditFormStatus !== "idle") {
+                      setAuditFormStatus("idle");
+                    }
                   }}
                   className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
                 />
@@ -312,6 +342,9 @@ export default function Home() {
                     ...currentForm,
                     website: event.target.value,
                   }));
+                  if (auditFormStatus !== "idle") {
+                    setAuditFormStatus("idle");
+                  }
                 }}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
               />
@@ -330,6 +363,9 @@ export default function Home() {
                   if (auditFormError) {
                     setAuditFormError("");
                   }
+                  if (auditFormStatus !== "idle") {
+                    setAuditFormStatus("idle");
+                  }
                 }}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
               >
@@ -338,15 +374,48 @@ export default function Home() {
                 <option value="I need a new website">I need a new website</option>
               </select>
             </label>
+            <label className="block sm:col-span-2">
+              <span className="text-sm font-bold text-slate-700">
+                Message / Requirements (optional)
+              </span>
+              <textarea
+                name="message"
+                rows={4}
+                value={auditForm.message}
+                onChange={(event) => {
+                  setAuditForm((currentForm) => ({
+                    ...currentForm,
+                    message: event.target.value,
+                  }));
+                  if (auditFormStatus !== "idle") {
+                    setAuditFormStatus("idle");
+                  }
+                }}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
+              />
+            </label>
           </div>
           {auditFormError ? (
             <p className="mt-4 text-sm font-semibold text-red-600">{auditFormError}</p>
           ) : null}
+          {auditFormStatus === "success" ? (
+            <p className="mt-4 text-sm font-semibold text-accent">
+              Thank you! We received your request. We&rsquo;ll review your details
+              and get back to you shortly.
+            </p>
+          ) : null}
+          {auditFormStatus === "error" ? (
+            <p className="mt-4 text-sm font-semibold text-red-600">
+              Something went wrong. Please try again or email us at
+              sumanaai.official@gmail.com.
+            </p>
+          ) : null}
           <button
             type="submit"
-            className="mt-6 w-full rounded-full bg-ink px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
+            disabled={isAuditSubmitting}
+            className="mt-6 w-full rounded-full bg-ink px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Request Free Audit
+            {isAuditSubmitting ? "Submitting..." : "Request Free Audit"}
           </button>
         </form>
       </section>
@@ -392,7 +461,7 @@ export default function Home() {
           Simple process
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-4">
-          {process.map((step, index) => (
+          {processSteps.map((step, index) => (
             <div key={step} className="rounded-2xl bg-white p-6 shadow-sm">
               <span className="font-heading text-3xl font-extrabold text-accent">
                 0{index + 1}
