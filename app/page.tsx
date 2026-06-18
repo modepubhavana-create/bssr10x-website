@@ -64,6 +64,7 @@ const initialAuditForm = {
   name: "",
   business: "",
   website: "",
+  websiteStatus: "",
   email: "",
 };
 
@@ -78,13 +79,14 @@ export default function Home() {
       name: auditForm.name.trim(),
       business: auditForm.business.trim(),
       website: auditForm.website.trim(),
+      websiteStatus: auditForm.websiteStatus.trim(),
       email: auditForm.email.trim(),
     };
 
     if (
       !trimmedForm.name ||
       !trimmedForm.business ||
-      !trimmedForm.website ||
+      !trimmedForm.websiteStatus ||
       !trimmedForm.email
     ) {
       setAuditFormError("Please fill in all required fields.");
@@ -97,7 +99,8 @@ export default function Home() {
     const body = [
       `Name: ${trimmedForm.name}`,
       `Business Name: ${trimmedForm.business}`,
-      `Website URL: ${trimmedForm.website}`,
+      `Website Status: ${trimmedForm.websiteStatus}`,
+      `Existing Website URL: ${trimmedForm.website || "N/A"}`,
       `Email: ${trimmedForm.email}`,
     ].join("\n");
 
@@ -273,7 +276,6 @@ export default function Home() {
             {[
               ["Name", "name", "text"],
               ["Business Name", "business", "text"],
-              ["Website URL", "website", "url"],
               ["Email", "email", "email"],
             ].map(([label, name, type]) => (
               <label key={name} className="block">
@@ -296,6 +298,46 @@ export default function Home() {
                 />
               </label>
             ))}
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">
+                Existing Website URL (optional)
+              </span>
+              <input
+                name="website"
+                type="text"
+                placeholder="Paste your website link, or type N/A if you don’t have one"
+                value={auditForm.website}
+                onChange={(event) => {
+                  setAuditForm((currentForm) => ({
+                    ...currentForm,
+                    website: event.target.value,
+                  }));
+                }}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Website Status</span>
+              <select
+                required
+                name="websiteStatus"
+                value={auditForm.websiteStatus}
+                onChange={(event) => {
+                  setAuditForm((currentForm) => ({
+                    ...currentForm,
+                    websiteStatus: event.target.value,
+                  }));
+                  if (auditFormError) {
+                    setAuditFormError("");
+                  }
+                }}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
+              >
+                <option value="">Select website status</option>
+                <option value="I already have a website">I already have a website</option>
+                <option value="I need a new website">I need a new website</option>
+              </select>
+            </label>
           </div>
           {auditFormError ? (
             <p className="mt-4 text-sm font-semibold text-red-600">{auditFormError}</p>
