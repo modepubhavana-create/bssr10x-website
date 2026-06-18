@@ -1,3 +1,8 @@
+"use client";
+
+import type { FormEvent } from "react";
+import { useState } from "react";
+
 const problems = [
   "Poor mobile experience",
   "Weak call-to-action",
@@ -55,7 +60,52 @@ const clients = [
   "Consultants",
 ];
 
+const initialAuditForm = {
+  name: "",
+  business: "",
+  website: "",
+  email: "",
+};
+
 export default function Home() {
+  const [auditForm, setAuditForm] = useState(initialAuditForm);
+  const [auditFormError, setAuditFormError] = useState("");
+
+  function handleAuditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedForm = {
+      name: auditForm.name.trim(),
+      business: auditForm.business.trim(),
+      website: auditForm.website.trim(),
+      email: auditForm.email.trim(),
+    };
+
+    if (
+      !trimmedForm.name ||
+      !trimmedForm.business ||
+      !trimmedForm.website ||
+      !trimmedForm.email
+    ) {
+      setAuditFormError("Please fill in all required fields.");
+      return;
+    }
+
+    setAuditFormError("");
+
+    const subject = `Free Website Audit Request - ${trimmedForm.business}`;
+    const body = [
+      `Name: ${trimmedForm.name}`,
+      `Business Name: ${trimmedForm.business}`,
+      `Website URL: ${trimmedForm.website}`,
+      `Email: ${trimmedForm.email}`,
+    ].join("\n");
+
+    window.location.href = `mailto:sumanaai.official@gmail.com?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-cloud text-ink">
       <section className="relative bg-ink text-white">
@@ -215,9 +265,8 @@ export default function Home() {
         </div>
 
         <form
-          action="mailto:sumanaai.official@gmail.com"
-          method="post"
-          encType="text/plain"
+          noValidate
+          onSubmit={handleAuditSubmit}
           className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft sm:p-8"
         >
           <div className="grid gap-5 sm:grid-cols-2">
@@ -233,11 +282,24 @@ export default function Home() {
                   required
                   name={name}
                   type={type}
+                  value={auditForm[name as keyof typeof auditForm]}
+                  onChange={(event) => {
+                    setAuditForm((currentForm) => ({
+                      ...currentForm,
+                      [name]: event.target.value,
+                    }));
+                    if (auditFormError) {
+                      setAuditFormError("");
+                    }
+                  }}
                   className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-teal-100"
                 />
               </label>
             ))}
           </div>
+          {auditFormError ? (
+            <p className="mt-4 text-sm font-semibold text-red-600">{auditFormError}</p>
+          ) : null}
           <button
             type="submit"
             className="mt-6 w-full rounded-full bg-ink px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
